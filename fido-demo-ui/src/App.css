@@ -1,0 +1,112 @@
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.header p {
+  color: #555;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.message.error {
+  background: #fee;
+  color: #c00;
+}
+
+.message.success {
+  background: #efe;
+  color: #060;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #fafafa;
+}
+
+.card h2 {
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+}
+
+.card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.card input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.card input:disabled {
+  background: #eee;
+  cursor: not-allowed;
+}
+
+.card button {
+  padding: 0.6rem 1rem;
+  background: #2b2564;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.card button:hover:not(:disabled) {
+  background: #3a3480;
+}
+
+.card button:disabled {
+  background: #888;
+  cursor: not-allowed;
+}
+
+.footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.footer p {
+  margin: 0;
+}
