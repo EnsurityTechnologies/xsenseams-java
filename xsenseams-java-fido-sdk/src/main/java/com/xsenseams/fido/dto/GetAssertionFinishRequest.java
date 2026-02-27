@@ -11,14 +11,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class GetAssertionFinishRequest {
 
-    @JsonProperty("username")
-    private String username;
-
     @JsonProperty("session_id")
     private String sessionId;
-
-    @JsonProperty("factor_index")
-    private Integer factorIndex;
 
     @JsonProperty("credential_assertion_response")
     private JsonNode credentialAssertionResponse;
@@ -26,19 +20,9 @@ public class GetAssertionFinishRequest {
     public GetAssertionFinishRequest() {
     }
 
-    public GetAssertionFinishRequest(String username, String sessionId, int factorIndex, JsonNode credentialAssertionResponse) {
-        this.username = username;
+    public GetAssertionFinishRequest(String sessionId, JsonNode credentialAssertionResponse) {
         this.sessionId = sessionId;
-        this.factorIndex = factorIndex;
         this.credentialAssertionResponse = credentialAssertionResponse;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     public String getSessionId() {
@@ -48,15 +32,7 @@ public class GetAssertionFinishRequest {
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
-
-    public Integer getFactorIndex() {
-        return factorIndex;
-    }
-
-    public void setFactorIndex(Integer factorIndex) {
-        this.factorIndex = factorIndex;
-    }
-
+    
     public JsonNode getCredentialAssertionResponse() {
         return credentialAssertionResponse;
     }

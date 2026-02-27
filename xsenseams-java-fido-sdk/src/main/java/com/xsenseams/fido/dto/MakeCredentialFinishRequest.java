@@ -10,9 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class MakeCredentialFinishRequest {
 
-    @JsonProperty("username")
-    private String username;
-
     @JsonProperty("session_id")
     private String sessionId;
 
@@ -22,18 +19,9 @@ public class MakeCredentialFinishRequest {
     public MakeCredentialFinishRequest() {
     }
 
-    public MakeCredentialFinishRequest(String username, String sessionId, JsonNode credentialCreationResponse) {
-        this.username = username;
+    public MakeCredentialFinishRequest(String sessionId, JsonNode credentialCreationResponse) {
         this.sessionId = sessionId;
         this.credentialCreationResponse = credentialCreationResponse;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     public String getSessionId() {

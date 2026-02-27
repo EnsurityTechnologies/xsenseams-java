@@ -88,37 +88,50 @@ function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
-    if (!loginUsername.trim()) {
-      setError('Enter a username for login.');
-      return;
-    }
     setLoading(true);
     try {
-      const startResp = await demoApi.loginStart(loginUsername.trim());
-      const sessionId = startResp.session_id;
-      const credentialAssertion = startResp.credential_assertion;
-      const options = credentialAssertion?.publicKey;
-      if (!options) {
+      const startResp = await demoApi.loginInit();
+      const initSessionId = startResp.session_id;
+      const initCredentialAssertion = startResp.credential_assertion;
+      const initOptions = initCredentialAssertion?.publicKey;
+      if (!initOptions) {
         setError('Server did not return credential assertion options.');
         setLoading(false);
         return;
       }
-      const assertion = (await navigator.credentials.get({
-        publicKey: {
-          ...options,
-          challenge: base64urlToUint8Array(options.challenge) as BufferSource,
-          allowCredentials: (options.allowCredentials || []).map((cred: { type: string; id: string }) => ({
-            type: 'public-key' as const,
+      console.log('Received login init response:', initCredentialAssertion);
+
+      const publicKey: PublicKeyCredentialRequestOptions = {
+        ...initOptions,
+        challenge: base64urlToUint8Array(initOptions.challenge) as BufferSource,
+        allowCredentials: (initOptions.allowCredentials ?? []).map(
+          (cred: { type?: string; id: string }) => ({
+            type: "public-key",
             id: base64urlToUint8Array(cred.id) as BufferSource,
-          })),
-        } as PublicKeyCredentialRequestOptions,
-      })) as PublicKeyCredential | null;
-      if (!assertion) {
+            // optional but recommended if you have it:
+            // transports: cred.transports,
+          }),
+        ),
+        // optional: keep what you already set in initOptions (rpId, timeout, userVerification, extensions...)
+      };
+
+      const requestOptions: CredentialRequestOptions = {
+        publicKey,
+        mediation: initCredentialAssertion.mediation as CredentialMediationRequirement | undefined,
+        // optional: if you were using it
+        // signal: abortController.signal,
+      };
+
+      console.log('Requesting login assertion with options:', requestOptions);
+      
+      const initAssertion = (await navigator.credentials.get(requestOptions)) as PublicKeyCredential | null;
+      console.log('Received login init assertion:', initAssertion);
+      if (!initAssertion) {
         setError('Assertion was cancelled or failed.');
         setLoading(false);
         return;
       }
-      const rawAssert = assertion as unknown as {
+      const rawInitAssert = initAssertion as unknown as {
         id: string;
         rawId: ArrayBuffer;
         response: {
@@ -128,29 +141,29 @@ function App() {
           userHandle: ArrayBuffer | null;
         };
       };
-      const credentialAssertionResponse = {
-        id: rawAssert.id,
-        rawId: bufferToBase64url(rawAssert.rawId),
+      const credentialInitAssertionResponse = {
+        id: rawInitAssert.id,
+        rawId: bufferToBase64url(rawInitAssert.rawId),
         type: 'public-key' as const,
         response: {
-          authenticatorData: bufferToBase64url(rawAssert.response.authenticatorData),
-          clientDataJSON: bufferToBase64url(rawAssert.response.clientDataJSON),
-          signature: bufferToBase64url(rawAssert.response.signature),
-          userHandle: rawAssert.response.userHandle
-            ? bufferToBase64url(rawAssert.response.userHandle)
+          authenticatorData: bufferToBase64url(rawInitAssert.response.authenticatorData),
+          clientDataJSON: bufferToBase64url(rawInitAssert.response.clientDataJSON),
+          signature: bufferToBase64url(rawInitAssert.response.signature),
+          userHandle: rawInitAssert.response.userHandle
+            ? bufferToBase64url(rawInitAssert.response.userHandle)
             : null,
         },
       };
-      const finishResp = await demoApi.loginFinish({
-        username: loginUsername.trim(),
-        session_id: sessionId,
-        factor_index: 1,
-        credential_assertion_response: credentialAssertionResponse,
+      const finishInitResp = await demoApi.loginInitFinish({
+        session_id: initSessionId,
+        credential_assertion_response: credentialInitAssertionResponse,
       });
-      if (finishResp.status) {
-        setLoginStatus('FIDO login successful.');
+
+      
+      if (finishInitResp.status) {
+        setLoginStatus('FIDO login successful for user: ' + finishInitResp.username);
       } else {
-        setError(finishResp.message || 'Login failed.');
+        setError(finishInitResp.message || 'Login failed.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed.');

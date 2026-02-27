@@ -39,8 +39,15 @@ export interface LoginStartResponse {
   session_id: string;
   credential_assertion: {
     publicKey?: PublicKeyCredentialRequestOptionsJSON;
+    mediation?: string;
     [key: string]: unknown;
   };
+}
+
+export interface LoginInitFinishResponse {
+  status: boolean;
+  message: string;
+  username: string;
 }
 
 export interface LoginFinishResponse {
@@ -58,6 +65,7 @@ interface PublicKeyCredentialCreationOptionsJSON {
 }
 
 interface PublicKeyCredentialRequestOptionsJSON {
+  rp: { name: string; id?: string };
   challenge: string;
   allowCredentials?: Array<{ type: string; id: string }>;
   [key: string]: unknown;
@@ -86,10 +94,22 @@ export const demoApi = {
       body: JSON.stringify({ username }),
     }),
 
-  loginFinish: (body: {
-    username: string;
+  loginInit: () =>
+    request<LoginStartResponse>('/api/demo/login/init', {
+      method: 'POST',
+    }),
+  
+  loginInitFinish: (body: {
     session_id: string;
-    factor_index: number;
+    credential_assertion_response: Record<string, unknown>;
+  }) =>
+    request<LoginInitFinishResponse>('/api/demo/login/initfinish', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  loginFinish: (body: {
+    session_id: string;
     credential_assertion_response: Record<string, unknown>;
   }) =>
     request<LoginFinishResponse>('/api/demo/login/finish', {
