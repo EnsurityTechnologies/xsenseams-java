@@ -1,6 +1,6 @@
 # XSenseAMS FIDO Sample (Java Backend)
 
-Sample Spring Boot application that uses **xsenseams-java-fido-sdk** to proxy the four XSenseAMS FIDO APIs. The demo frontend calls this backend, which in turn calls XSenseAMS via the SDK.
+Sample Spring Boot application that uses **xsenseams-java-fido-sdk** to proxy XSenseAMS FIDO APIs. The demo frontend calls this backend, which in turn calls XSenseAMS via the SDK.
 
 ## Prerequisites
 
@@ -50,7 +50,9 @@ java -jar target/xsenseams-fido-sample-1.0.0.jar
 | POST | `/api/demo/register/start` | `{ "username": "string" }` | `{ "session_id", "credential_creation" }` |
 | POST | `/api/demo/register/finish` | `{ "username", "session_id", "credential_creation_response" }` | `{ "status", "message" }` |
 | POST | `/api/demo/login/start` | `{ "username": "string" }` | `{ "session_id", "credential_assertion" }` |
-| POST | `/api/demo/login/finish` | `{ "username", "session_id", "factor_index", "credential_assertion_response" }` | `{ "status", "message" }` |
+| POST | `/api/demo/login/init` | `{}` | `{ "session_id", "credential_assertion" }` |
+| POST | `/api/demo/login/initfinish` | `{ "session_id", "credential_assertion_response" }` | `{ "status", "message", "username" }` |
+| POST | `/api/demo/login/finish` | `{ "session_id", "credential_assertion_response" }` | `{ "status", "message" }` |
 
 CORS is enabled for `http://localhost:5173` and `http://localhost:3000` so the demo frontend can call this backend.
 

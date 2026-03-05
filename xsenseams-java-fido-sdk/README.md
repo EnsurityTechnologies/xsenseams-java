@@ -77,7 +77,6 @@ import com.xsenseams.fido.dto.BaseResponse;
 
 // credentialCreationResponse = result from authenticator (JsonNode or object serializable to W3C format)
 MakeCredentialFinishRequest finishReq = new MakeCredentialFinishRequest(
-    "username",
     sessionId,
     credentialCreationResponse  // JsonNode
 );
@@ -108,18 +107,48 @@ JsonNode credentialAssertion = resp.getCredentialAssertion();  // PublicKeyCrede
 import com.xsenseams.fido.dto.GetAssertionFinishRequest;
 
 // credentialAssertionResponse = result from authenticator (JsonNode)
-// factor_index: 1 = FirstFactor, 2 = SecondFactor (FIDO as second factor typically uses 2)
 GetAssertionFinishRequest finishReq = new GetAssertionFinishRequest(
-    "username",
     sessionId,
-    2,  // SecondFactor
     credentialAssertionResponse
 );
 BaseResponse finishResp = client.getAssertionResponse(finishReq);
 // finishResp.getStatus() == true on success
 ```
 
-### 4. Error handling
+### 4. Username-less / discoverable login flow (assertion init)
+
+If your server flow supports starting assertion without sending username first:
+
+**Step 1 – Init assertion:** fetch challenge/options without username.
+
+```java
+import com.xsenseams.fido.dto.GetAssertionResponse;
+
+GetAssertionResponse initResp = client.getAssertionInit();
+
+String sessionId = initResp.getSessionId();
+JsonNode credentialAssertion = initResp.getCredentialAssertion();
+
+// Your app: use WebAuthn to get credential_assertion_response from the authenticator
+```
+
+**Step 2 – Init finish assertion:** submit authenticator response and receive resolved username.
+
+```java
+import com.xsenseams.fido.dto.GetAssertionFinishRequest;
+import com.xsenseams.fido.dto.GetAssertionInitFinishResponse;
+
+GetAssertionFinishRequest initFinishReq = new GetAssertionFinishRequest(
+    sessionId,
+    credentialAssertionResponse
+);
+GetAssertionInitFinishResponse initFinishResp = client.getAssertionInitFinish(initFinishReq);
+
+boolean status = Boolean.TRUE.equals(initFinishResp.getStatus());
+String username = initFinishResp.getUsername();
+```
+
+### 5. Error handling
 
 On HTTP errors or when the server returns `status: false`, the client throws `FidoApiException`:
 
@@ -147,6 +176,8 @@ The SDK uses **Jackson `JsonNode`** for WebAuthn fields (`credential_creation`, 
 | `makeCredentialRequest` | POST `/api/fidomakecredentialrequest` | Start FIDO registration |
 | `makeCredentialResponse` | POST `/api/fidomakecredentialresponse` | Finish FIDO registration |
 | `getAssertionRequest` | POST `/api/fidogetassertion` | Start FIDO login |
+| `getAssertionInit` | GET `/api/fidogetassertioninit` | Start username-less/discoverable FIDO login |
+| `getAssertionInitFinish` | POST `/api/fidogetassertioninitfinish` | Finish username-less/discoverable FIDO login and resolve username |
 | `getAssertionResponse` | POST `/api/fidogetassertionresponse` | Finish FIDO login |
 
 All requests require header: `X-AMS-API-Key: <your-api-key>`.
