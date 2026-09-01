@@ -7,7 +7,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Configuration for FidoClient.
- * Base URL (e.g. https://ams.example.com or tenant-in-path), API key, optional tenant header, timeouts.
+ * Base URL (e.g. https://ams.example.com or tenant-in-path), API key, origin URL,
+ * optional tenant header, timeouts.
  */
 public class FidoClientConfig {
 
@@ -21,11 +22,13 @@ public class FidoClientConfig {
     private final String tenantHeaderValue;
     private final int connectTimeoutSeconds;
     private final int readTimeoutSeconds;
+    private final String originUrl;
     private final OkHttpClient customHttpClient;
 
     private FidoClientConfig(Builder builder) {
         this.baseUrl = normalizeBaseUrl(Objects.requireNonNull(builder.baseUrl, "baseUrl"));
         this.apiKey = Objects.requireNonNull(builder.apiKey, "apiKey");
+        this.originUrl = normalizeUrl(builder.originUrl);
         this.tenantHeaderName = builder.tenantHeaderName;
         this.tenantHeaderValue = builder.tenantHeaderValue;
         this.connectTimeoutSeconds = builder.connectTimeoutSeconds > 0 ? builder.connectTimeoutSeconds : DEFAULT_CONNECT_TIMEOUT_SEC;
@@ -34,6 +37,11 @@ public class FidoClientConfig {
     }
 
     private static String normalizeBaseUrl(String url) {
+        if (url == null) return null;
+        return normalizeUrl(url);
+    }
+
+    private static String normalizeUrl(String url) {
         if (url == null) return null;
         String s = url.trim();
         if (s.endsWith("/")) {
@@ -48,6 +56,10 @@ public class FidoClientConfig {
 
     public String getApiKey() {
         return apiKey;
+    }
+
+    public String getOriginUrl() {
+        return originUrl;
     }
 
     public String getTenantHeaderName() {
@@ -77,6 +89,7 @@ public class FidoClientConfig {
     public static final class Builder {
         private String baseUrl;
         private String apiKey;
+        private String originUrl;
         private String tenantHeaderName;
         private String tenantHeaderValue;
         private int connectTimeoutSeconds = DEFAULT_CONNECT_TIMEOUT_SEC;
@@ -90,6 +103,11 @@ public class FidoClientConfig {
 
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
+            return this;
+        }
+
+        public Builder originUrl(String originUrl) {
+            this.originUrl = originUrl;
             return this;
         }
 

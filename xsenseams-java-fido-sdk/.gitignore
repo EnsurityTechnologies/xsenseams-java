@@ -5,6 +5,7 @@ target/
 *.war
 *.ear
 *.class
+.mvn_bin/
 
 # IDE
 .idea/
