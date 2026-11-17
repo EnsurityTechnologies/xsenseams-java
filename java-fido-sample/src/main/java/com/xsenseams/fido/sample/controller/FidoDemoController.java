@@ -21,27 +21,15 @@ public class FidoDemoController {
         this.fidoClient = fidoClient;
     }
 
-    @GetMapping({"/health", "/register/start", "/register/finish", "/login/start", "/login/init", "/login/finish", "/login/initfinish"})
-    public ResponseEntity<?> home() {
-        return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "service", "XSenseAMS FIDO Backend API",
-                "note", "FIDO API endpoints require HTTP POST requests with JSON payload."
-        ));
-    }
-
     @PostMapping("/register/start")
-    public ResponseEntity<?> registerStart(@RequestBody Map<String, String> body,
-                                          @RequestHeader(value = "Origin", required = false) String origin,
-                                          @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> registerStart(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         if (username == null || username.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "username is required"));
         }
         try {
             MakeCredentialRequest req = new MakeCredentialRequest(username);
-            MakeCredentialResponse resp = fidoClient.makeCredentialRequest(req, requestOrigin);
+            MakeCredentialResponse resp = fidoClient.makeCredentialRequest(req);
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
                     "credential_creation", resp.getCredentialCreation() != null ? resp.getCredentialCreation() : Map.of()
@@ -54,10 +42,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/register/finish")
-    public ResponseEntity<?> registerFinish(@RequestBody RegisterFinishRequest body,
-                                            @RequestHeader(value = "Origin", required = false) String origin,
-                                            @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> registerFinish(@RequestBody RegisterFinishRequest body) {
         if (body.getUsername() == null || body.getUsername().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "username is required"));
         }
@@ -72,7 +57,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialCreationResponse()
             );
-                BaseResponse resp = fidoClient.makeCredentialResponse(req, requestOrigin);
+            BaseResponse resp = fidoClient.makeCredentialResponse(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : ""
@@ -85,17 +70,14 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/start")
-    public ResponseEntity<?> loginStart(@RequestBody Map<String, String> body,
-                                        @RequestHeader(value = "Origin", required = false) String origin,
-                                        @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> loginStart(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         if (username == null || username.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "username is required"));
         }
         try {
             GetAssertionRequest req = new GetAssertionRequest(username);
-            GetAssertionResponse resp = fidoClient.getAssertionRequest(req, requestOrigin);
+            GetAssertionResponse resp = fidoClient.getAssertionRequest(req);
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
                     "credential_assertion", resp.getCredentialAssertion() != null ? resp.getCredentialAssertion() : Map.of()
@@ -108,11 +90,9 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/init")
-        public ResponseEntity<?> loginInit(@RequestHeader(value = "Origin", required = false) String origin,
-                           @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> loginInit() {
         try {
-            GetAssertionResponse resp = fidoClient.getAssertionInit(requestOrigin);
+            GetAssertionResponse resp = fidoClient.getAssertionInit();
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
                     "credential_assertion", resp.getCredentialAssertion() != null ? resp.getCredentialAssertion() : Map.of()
@@ -125,10 +105,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/initfinish")
-    public ResponseEntity<?> loginInitFinish(@RequestBody LoginFinishRequest body,
-                                             @RequestHeader(value = "Origin", required = false) String origin,
-                                             @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> loginInitFinish(@RequestBody LoginFinishRequest body) {
         if (body.getSessionId() == null || body.getSessionId().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "session_id is required"));
         }
@@ -140,7 +117,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialAssertionResponse()
             );
-                GetAssertionInitFinishResponse resp = fidoClient.getAssertionInitFinish(req, requestOrigin);
+            GetAssertionInitFinishResponse resp = fidoClient.getAssertionInitFinish(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : "",
@@ -154,10 +131,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/finish")
-    public ResponseEntity<?> loginFinish(@RequestBody LoginFinishRequest body,
-                                         @RequestHeader(value = "Origin", required = false) String origin,
-                                         @RequestHeader(value = "X-Client-Origin", required = false) String clientOrigin) {
-        String requestOrigin = origin != null && !origin.isBlank() ? origin : clientOrigin;
+    public ResponseEntity<?> loginFinish(@RequestBody LoginFinishRequest body) {
         if (body.getSessionId() == null || body.getSessionId().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "session_id is required"));
         }
@@ -169,7 +143,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialAssertionResponse()
             );
-                BaseResponse resp = fidoClient.getAssertionResponse(req, requestOrigin);
+            BaseResponse resp = fidoClient.getAssertionResponse(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : ""

@@ -3,16 +3,14 @@
  * Base URL is read from VITE_API_BASE (e.g. http://localhost:8080).
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE.replace(/\/$/, '')}${path}`;
-  const clientOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const res = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(clientOrigin ? { 'X-Client-Origin': clientOrigin } : {}),
       ...options.headers,
     },
   });

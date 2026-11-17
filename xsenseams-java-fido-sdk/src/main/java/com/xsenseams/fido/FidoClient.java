@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xsenseams.fido.dto.*;
 import okhttp3.*;
 
-import javax.net.ssl.*;
 import java.io.IOException;
-import java.security.cert.X509Certificate;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -39,42 +37,10 @@ public class FidoClient {
     }
 
     private static OkHttpClient defaultHttpClient(FidoClientConfig config) {
-        return createTrustAllOkHttpClient(config.getConnectTimeoutSeconds(), config.getReadTimeoutSeconds());
-    }
-
-    private static OkHttpClient createTrustAllOkHttpClient(long connectTimeout, long readTimeout) {
-        try {
-            TrustManager[] trustAllCerts = new TrustManager[]{
-                new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[0];
-                    }
-                }
-            };
-
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-            return new OkHttpClient.Builder()
-                    .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
-                    .hostnameVerifier((hostname, session) -> true)
-                    .connectTimeout(connectTimeout, TimeUnit.SECONDS)
-                    .readTimeout(readTimeout, TimeUnit.SECONDS)
-                    .build();
-        } catch (Exception e) {
-            return new OkHttpClient.Builder()
-                    .connectTimeout(connectTimeout, TimeUnit.SECONDS)
-                    .readTimeout(readTimeout, TimeUnit.SECONDS)
-                    .build();
-        }
+        return new OkHttpClient.Builder()
+                .connectTimeout(config.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
+                .readTimeout(config.getReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .build();
     }
 
     /**
@@ -84,11 +50,7 @@ public class FidoClient {
      * @return MakeCredentialResponse with session_id and credential_creation for the authenticator
      */
     public MakeCredentialResponse makeCredentialRequest(MakeCredentialRequest request) throws FidoApiException {
-        return makeCredentialRequest(request, null);
-    }
-
-    public MakeCredentialResponse makeCredentialRequest(MakeCredentialRequest request, String origin) throws FidoApiException {
-        return post(PATH_MAKE_CREDENTIAL_REQUEST, request, MakeCredentialResponse.class, origin);
+        return post(PATH_MAKE_CREDENTIAL_REQUEST, request, MakeCredentialResponse.class);
     }
 
     /**
@@ -98,11 +60,7 @@ public class FidoClient {
      * @return BaseResponse (status, message); throws FidoApiException on error
      */
     public BaseResponse makeCredentialResponse(MakeCredentialFinishRequest request) throws FidoApiException {
-        return makeCredentialResponse(request, null);
-    }
-
-    public BaseResponse makeCredentialResponse(MakeCredentialFinishRequest request, String origin) throws FidoApiException {
-        return post(PATH_MAKE_CREDENTIAL_RESPONSE, request, BaseResponse.class, origin);
+        return post(PATH_MAKE_CREDENTIAL_RESPONSE, request, BaseResponse.class);
     }
 
     /**
@@ -112,11 +70,7 @@ public class FidoClient {
      * @return GetAssertionResponse with session_id and credential_assertion for the authenticator
      */
     public GetAssertionResponse getAssertionRequest(GetAssertionRequest request) throws FidoApiException {
-        return getAssertionRequest(request, null);
-    }
-
-    public GetAssertionResponse getAssertionRequest(GetAssertionRequest request, String origin) throws FidoApiException {
-        return post(PATH_GET_ASSERTION, request, GetAssertionResponse.class, origin);
+        return post(PATH_GET_ASSERTION, request, GetAssertionResponse.class);
     }
 
      /**
@@ -126,11 +80,7 @@ public class FidoClient {
      * @return GetAssertionResponse with session_id and credential_assertion for the authenticator
      */
     public GetAssertionResponse getAssertionInit() throws FidoApiException {
-        return getAssertionInit(null);
-    }
-
-    public GetAssertionResponse getAssertionInit(String origin) throws FidoApiException {
-        return get(PATH_GET_ASSERTION_INIT, GetAssertionResponse.class, origin);
+        return get(PATH_GET_ASSERTION_INIT, GetAssertionResponse.class);
     }
 
      /**
@@ -140,11 +90,7 @@ public class FidoClient {
      * @return GetAssertionResponse with session_id and credential_assertion for the authenticator
      */
     public GetAssertionInitFinishResponse getAssertionInitFinish(GetAssertionFinishRequest request) throws FidoApiException {
-        return getAssertionInitFinish(request, null);
-    }
-
-    public GetAssertionInitFinishResponse getAssertionInitFinish(GetAssertionFinishRequest request, String origin) throws FidoApiException {
-        return post(PATH_GET_ASSERTION_INIT_FINISH, request, GetAssertionInitFinishResponse.class, origin);
+        return post(PATH_GET_ASSERTION_INIT_FINISH, request, GetAssertionInitFinishResponse.class);
     }
 
     /**
@@ -154,20 +100,11 @@ public class FidoClient {
      * @return BaseResponse (status, message); throws FidoApiException on error
      */
     public BaseResponse getAssertionResponse(GetAssertionFinishRequest request) throws FidoApiException {
-        return getAssertionResponse(request, null);
-    }
-
-    public BaseResponse getAssertionResponse(GetAssertionFinishRequest request, String origin) throws FidoApiException {
-        return post(PATH_GET_ASSERTION_RESPONSE, request, BaseResponse.class, origin);
+        return post(PATH_GET_ASSERTION_RESPONSE, request, BaseResponse.class);
     }
 
     private <Resp> Resp get(String path, Class<Resp> responseType) throws FidoApiException {
-        return get(path, responseType, null);
-    }
-
-    private <Resp> Resp get(String path, Class<Resp> responseType, String origin) throws FidoApiException {
         String url = config.getBaseUrl() + path;
-        String requestOrigin = resolveOrigin(origin);
         Request.Builder reqBuilder = new Request.Builder()
                 .url(url)
                 .addHeader(API_KEY_HEADER, config.getApiKey())
@@ -175,10 +112,6 @@ public class FidoClient {
 
         if (config.getTenantHeaderName() != null && config.getTenantHeaderValue() != null) {
             reqBuilder.addHeader(config.getTenantHeaderName(), config.getTenantHeaderValue());
-        }
-
-        if (requestOrigin != null && !requestOrigin.isBlank()) {
-            reqBuilder.addHeader("Origin", requestOrigin);
         }
 
         Request request = reqBuilder
@@ -216,23 +149,14 @@ public class FidoClient {
     }
 
     private <Req, Resp> Resp post(String path, Req body, Class<Resp> responseType) throws FidoApiException {
-        return post(path, body, responseType, null);
-    }
-
-    private <Req, Resp> Resp post(String path, Req body, Class<Resp> responseType, String origin) throws FidoApiException {
         String url = config.getBaseUrl() + path;
-        String requestOrigin = resolveOrigin(origin);
         Request.Builder reqBuilder = new Request.Builder()
                 .url(url)
                 .addHeader(API_KEY_HEADER, config.getApiKey())
-            .addHeader("Content-Type", "application/json");
+                .addHeader("Content-Type", "application/json");
 
         if (config.getTenantHeaderName() != null && config.getTenantHeaderValue() != null) {
             reqBuilder.addHeader(config.getTenantHeaderName(), config.getTenantHeaderValue());
-        }
-
-        if (requestOrigin != null && !requestOrigin.isBlank()) {
-            reqBuilder.addHeader("Origin", requestOrigin);
         }
 
         byte[] jsonBytes;
@@ -274,13 +198,6 @@ public class FidoClient {
         } catch (IOException e) {
             throw new FidoApiException("Request failed: " + e.getMessage(), -1, e);
         }
-    }
-
-    private String resolveOrigin(String origin) {
-        if (origin != null && !origin.isBlank()) {
-            return origin;
-        }
-        return config.getOriginUrl();
     }
 
     private String parseErrorMessage(String responseBody, int code) {

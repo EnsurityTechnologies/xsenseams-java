@@ -38,10 +38,6 @@ function App() {
       const credential = (await navigator.credentials.create({
         publicKey: {
           ...options,
-          rp: {
-            ...options.rp,
-            id: window.location.hostname,
-          },
           challenge: base64urlToUint8Array(options.challenge) as BufferSource,
           user: {
             ...options.user,
@@ -107,7 +103,6 @@ function App() {
 
       const publicKey: PublicKeyCredentialRequestOptions = {
         ...initOptions,
-        rpId: window.location.hostname,
         challenge: base64urlToUint8Array(initOptions.challenge) as BufferSource,
         allowCredentials: (initOptions.allowCredentials ?? []).map(
           (cred: { type?: string; id: string }) => ({
