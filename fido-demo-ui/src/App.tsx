@@ -5,11 +5,6 @@ import './App.css';
 
 type AssertionPublicKey = NonNullable<LoginStartResponse['credential_assertion']['publicKey']>;
 
-function optionalConfigId(value: string): string | undefined {
-  const id = value.trim();
-  return id.length > 0 ? id : undefined;
-}
-
 function toCreationOptions(options: {
   challenge: string;
   user: { id: string; name: string; displayName: string };
@@ -79,7 +74,6 @@ async function getAssertion(credentialAssertion: LoginStartResponse['credential_
 function App() {
   const [registerUsername, setRegisterUsername] = useState('');
   const [loginUsername, setLoginUsername] = useState('');
-  const [fidoServerConfigId, setFidoServerConfigId] = useState('');
   const [registerStatus, setRegisterStatus] = useState<string | null>(null);
   const [loginStatus, setLoginStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,10 +94,7 @@ function App() {
     }
     setLoading(true);
     try {
-      const startResp = await demoApi.registerStart(
-        registerUsername.trim(),
-        optionalConfigId(fidoServerConfigId),
-      );
+      const startResp = await demoApi.registerStart(registerUsername.trim());
       const options = startResp.credential_creation?.publicKey;
       if (!options) {
         setError('Server did not return credential creation options.');
@@ -157,10 +148,7 @@ function App() {
     }
     setLoading(true);
     try {
-      const startResp = await demoApi.loginStart(
-        loginUsername.trim(),
-        optionalConfigId(fidoServerConfigId),
-      );
+      const startResp = await demoApi.loginStart(loginUsername.trim());
       const assertion = await getAssertion(startResp.credential_assertion);
       const finishResp = await demoApi.loginFinish({
         session_id: startResp.session_id,
@@ -182,7 +170,7 @@ function App() {
     clearMessages();
     setLoading(true);
     try {
-      const startResp = await demoApi.loginInit(optionalConfigId(fidoServerConfigId));
+      const startResp = await demoApi.loginInit();
       const assertion = await getAssertion(startResp.credential_assertion);
       const finishResp = await demoApi.loginInitFinish({
         session_id: startResp.session_id,
@@ -215,25 +203,6 @@ function App() {
         {error && <div className="message error">{error}</div>}
         {registerStatus && <div className="message success">{registerStatus}</div>}
         {loginStatus && <div className="message success">{loginStatus}</div>}
-
-        <section className="card">
-          <h2>FIDO server</h2>
-          <label>
-            Config id
-            <input
-              type="text"
-              value={fidoServerConfigId}
-              onChange={(e) => setFidoServerConfigId(e.target.value)}
-              placeholder="optional"
-              disabled={loading}
-            />
-          </label>
-          <p className="hint">
-            Leave this blank to use the Java backend setting ams.fido-server-config-id.
-            Security-key login does not ask for a username, so that backend id is what selects the configuration.
-            A value typed here overrides the backend for this ceremony. This page origin must be listed on that configuration.
-          </p>
-        </section>
 
         <section className="card">
           <h2>Register FIDO</h2>
@@ -290,8 +259,8 @@ function App() {
 
       <footer className="footer">
         <p>
-          AMS must be running, this UI origin must be on the selected FIDO configuration, and the sample
-          Java backend must be started (port 8080). Set VITE_API_BASE if the backend is elsewhere.
+          Open this app at http://ui1.localhost:5173 or http://ui2.localhost:5173. The browser sends that
+          page origin to the Java API on port 8080, and AMS selects the FIDO configuration from it.
         </p>
       </footer>
     </div>

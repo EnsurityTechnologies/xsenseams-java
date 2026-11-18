@@ -21,12 +21,6 @@ public class FidoClientBeanConfig {
     @Value("${ams.tenant-header-value:}")
     private String tenantHeaderValue;
 
-    @Value("${ams.origin:}")
-    private String origin;
-
-    @Value("${ams.fido-server-config-id:}")
-    private String fidoServerConfigId;
-
     @Bean
     public FidoClient fidoClient() {
         FidoClientConfig.Builder builder = FidoClientConfig.builder()
@@ -35,12 +29,6 @@ public class FidoClientBeanConfig {
         if (tenantHeaderName != null && !tenantHeaderName.isBlank()
                 && tenantHeaderValue != null && !tenantHeaderValue.isBlank()) {
             builder.tenantHeader(tenantHeaderName, tenantHeaderValue);
-        }
-        if (origin != null && !origin.isBlank()) {
-            builder.origin(origin);
-        }
-        if (fidoServerConfigId != null && !fidoServerConfigId.isBlank()) {
-            builder.fidoServerConfigId(fidoServerConfigId);
         }
         return new FidoClient(builder.build());
     }

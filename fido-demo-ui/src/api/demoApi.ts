@@ -73,19 +73,11 @@ interface PublicKeyCredentialRequestOptionsJSON {
   [key: string]: unknown;
 }
 
-function withConfig(body: Record<string, string>, fidoServerConfigId?: string): Record<string, string> {
-  const id = fidoServerConfigId?.trim();
-  if (id) {
-    body.fido_server_config_id = id;
-  }
-  return body;
-}
-
 export const demoApi = {
-  registerStart: (username: string, fidoServerConfigId?: string) =>
+  registerStart: (username: string) =>
     request<RegisterStartResponse>('/api/demo/register/start', {
       method: 'POST',
-      body: JSON.stringify(withConfig({ username }, fidoServerConfigId)),
+      body: JSON.stringify({ username }),
     }),
 
   registerFinish: (body: {
@@ -97,16 +89,16 @@ export const demoApi = {
       body: JSON.stringify(body),
     }),
 
-  loginStart: (username: string, fidoServerConfigId?: string) =>
+  loginStart: (username: string) =>
     request<LoginStartResponse>('/api/demo/login/start', {
       method: 'POST',
-      body: JSON.stringify(withConfig({ username }, fidoServerConfigId)),
+      body: JSON.stringify({ username }),
     }),
 
-  loginInit: (fidoServerConfigId?: string) =>
+  loginInit: () =>
     request<LoginStartResponse>('/api/demo/login/init', {
       method: 'POST',
-      body: JSON.stringify(withConfig({}, fidoServerConfigId)),
+      body: JSON.stringify({}),
     }),
   
   loginInitFinish: (body: {

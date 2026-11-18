@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.xsenseams.fido.FidoApiException;
 import com.xsenseams.fido.FidoClient;
 import com.xsenseams.fido.dto.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,21 +13,17 @@ import java.util.Map;
 
 /**
  * Proxies the demo UI to the six AMS FIDO routes.
- * The browser Origin is forwarded so AMS can select a FIDO server configuration
- * and so finish verification sees the same page origin the security key signed.
+ * Start calls copy the browser Origin and do not send a FIDO configuration id,
+ * so AMS selects the configuration from that page origin.
  */
 @RestController
 @RequestMapping("/api/demo")
 public class FidoDemoController {
 
     private final FidoClient fidoClient;
-    private final String defaultFidoServerConfigId;
 
-    public FidoDemoController(
-            FidoClient fidoClient,
-            @Value("${ams.fido-server-config-id:}") String defaultFidoServerConfigId) {
+    public FidoDemoController(FidoClient fidoClient) {
         this.fidoClient = fidoClient;
-        this.defaultFidoServerConfigId = defaultFidoServerConfigId;
     }
 
     @PostMapping("/register/start")
@@ -40,7 +35,7 @@ public class FidoDemoController {
             return badRequest("username is required");
         }
         try {
-            MakeCredentialRequest req = new MakeCredentialRequest(username.trim(), resolveConfigId(body));
+            MakeCredentialRequest req = new MakeCredentialRequest(username.trim());
             MakeCredentialResponse resp = fidoClient.makeCredentialRequest(req, origin);
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
@@ -52,9 +47,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/register/finish")
-    public ResponseEntity<?> registerFinish(
-            @RequestHeader(value = "Origin", required = false) String origin,
-            @RequestBody RegisterFinishRequest body) {
+    public ResponseEntity<?> registerFinish(@RequestBody RegisterFinishRequest body) {
         if (body.getSessionId() == null || body.getSessionId().isBlank()) {
             return badRequest("session_id is required");
         }
@@ -66,7 +59,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialCreationResponse()
             );
-            BaseResponse resp = fidoClient.makeCredentialResponse(req, origin);
+            BaseResponse resp = fidoClient.makeCredentialResponse(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : ""
@@ -85,7 +78,7 @@ public class FidoDemoController {
             return badRequest("username is required");
         }
         try {
-            GetAssertionRequest req = new GetAssertionRequest(username.trim(), resolveConfigId(body));
+            GetAssertionRequest req = new GetAssertionRequest(username.trim());
             GetAssertionResponse resp = fidoClient.getAssertionRequest(req, origin);
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
@@ -98,10 +91,9 @@ public class FidoDemoController {
 
     @PostMapping("/login/init")
     public ResponseEntity<?> loginInit(
-            @RequestHeader(value = "Origin", required = false) String origin,
-            @RequestBody(required = false) Map<String, String> body) {
+            @RequestHeader(value = "Origin", required = false) String origin) {
         try {
-            GetAssertionResponse resp = fidoClient.getAssertionInit(resolveConfigId(body), origin);
+            GetAssertionResponse resp = fidoClient.getAssertionInit(null, origin);
             return ResponseEntity.ok(Map.of(
                     "session_id", resp.getSessionId() != null ? resp.getSessionId() : "",
                     "credential_assertion", resp.getCredentialAssertion() != null ? resp.getCredentialAssertion() : Map.of()
@@ -112,9 +104,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/initfinish")
-    public ResponseEntity<?> loginInitFinish(
-            @RequestHeader(value = "Origin", required = false) String origin,
-            @RequestBody LoginFinishRequest body) {
+    public ResponseEntity<?> loginInitFinish(@RequestBody LoginFinishRequest body) {
         if (body.getSessionId() == null || body.getSessionId().isBlank()) {
             return badRequest("session_id is required");
         }
@@ -126,7 +116,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialAssertionResponse()
             );
-            GetAssertionInitFinishResponse resp = fidoClient.getAssertionInitFinish(req, origin);
+            GetAssertionInitFinishResponse resp = fidoClient.getAssertionInitFinish(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : "",
@@ -138,9 +128,7 @@ public class FidoDemoController {
     }
 
     @PostMapping("/login/finish")
-    public ResponseEntity<?> loginFinish(
-            @RequestHeader(value = "Origin", required = false) String origin,
-            @RequestBody LoginFinishRequest body) {
+    public ResponseEntity<?> loginFinish(@RequestBody LoginFinishRequest body) {
         if (body.getSessionId() == null || body.getSessionId().isBlank()) {
             return badRequest("session_id is required");
         }
@@ -152,7 +140,7 @@ public class FidoDemoController {
                     body.getSessionId(),
                     body.getCredentialAssertionResponse()
             );
-            BaseResponse resp = fidoClient.getAssertionResponse(req, origin);
+            BaseResponse resp = fidoClient.getAssertionResponse(req);
             return ResponseEntity.ok(Map.of(
                     "status", resp.getStatus() != null ? resp.getStatus() : false,
                     "message", resp.getMessage() != null ? resp.getMessage() : ""
@@ -160,21 +148,6 @@ public class FidoDemoController {
         } catch (FidoApiException e) {
             return apiError(e);
         }
-    }
-
-    /**
-     * Request id wins. Otherwise the configured id is used. A blank value is omitted
-     * so AMS can select by Origin, then the primary configuration.
-     */
-    private String resolveConfigId(Map<String, String> body) {
-        String fromBody = body == null ? null : body.get("fido_server_config_id");
-        if (fromBody != null && !fromBody.isBlank()) {
-            return fromBody.trim();
-        }
-        if (defaultFidoServerConfigId != null && !defaultFidoServerConfigId.isBlank()) {
-            return defaultFidoServerConfigId.trim();
-        }
-        return null;
     }
 
     private ResponseEntity<Map<String, String>> badRequest(String message) {
