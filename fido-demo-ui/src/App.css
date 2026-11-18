@@ -99,6 +99,36 @@
   cursor: not-allowed;
 }
 
+.card button.secondary {
+  background: #fff;
+  color: #2b2564;
+  border: 1px solid #2b2564;
+}
+
+.card button.secondary:hover:not(:disabled) {
+  background: #f3f1fb;
+}
+
+.card button.secondary:disabled {
+  background: #eee;
+  color: #888;
+  border-color: #ccc;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hint {
+  margin: 0.75rem 0 0 0;
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .footer {
   margin-top: 2rem;
   padding-top: 1rem;

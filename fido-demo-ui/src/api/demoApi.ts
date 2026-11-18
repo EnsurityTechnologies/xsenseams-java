@@ -65,21 +65,30 @@ interface PublicKeyCredentialCreationOptionsJSON {
 }
 
 interface PublicKeyCredentialRequestOptionsJSON {
-  rp: { name: string; id?: string };
   challenge: string;
+  timeout?: number;
+  rpId?: string;
   allowCredentials?: Array<{ type: string; id: string }>;
+  userVerification?: string;
   [key: string]: unknown;
 }
 
+function withConfig(body: Record<string, string>, fidoServerConfigId?: string): Record<string, string> {
+  const id = fidoServerConfigId?.trim();
+  if (id) {
+    body.fido_server_config_id = id;
+  }
+  return body;
+}
+
 export const demoApi = {
-  registerStart: (username: string) =>
+  registerStart: (username: string, fidoServerConfigId?: string) =>
     request<RegisterStartResponse>('/api/demo/register/start', {
       method: 'POST',
-      body: JSON.stringify({ username }),
+      body: JSON.stringify(withConfig({ username }, fidoServerConfigId)),
     }),
 
   registerFinish: (body: {
-    username: string;
     session_id: string;
     credential_creation_response: Record<string, unknown>;
   }) =>
@@ -88,15 +97,16 @@ export const demoApi = {
       body: JSON.stringify(body),
     }),
 
-  loginStart: (username: string) =>
+  loginStart: (username: string, fidoServerConfigId?: string) =>
     request<LoginStartResponse>('/api/demo/login/start', {
       method: 'POST',
-      body: JSON.stringify({ username }),
+      body: JSON.stringify(withConfig({ username }, fidoServerConfigId)),
     }),
 
-  loginInit: () =>
+  loginInit: (fidoServerConfigId?: string) =>
     request<LoginStartResponse>('/api/demo/login/init', {
       method: 'POST',
+      body: JSON.stringify(withConfig({}, fidoServerConfigId)),
     }),
   
   loginInitFinish: (body: {

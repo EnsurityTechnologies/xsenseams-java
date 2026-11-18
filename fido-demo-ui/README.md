@@ -31,7 +31,10 @@ Open http://localhost:5173 in a browser. WebAuthn requires a secure context (HTT
 
 ## Flow
 
-1. **Register FIDO:** Enter a username that exists in XSenseAMS, click "Register FIDO". The app calls the Java backend `/api/demo/register/start`, gets credential creation options, calls `navigator.credentials.create()`, then sends the result to `/api/demo/register/finish`.
-2. **Login with FIDO:** Enter the same username, click "Login with FIDO". The app calls `/api/demo/login/start`, gets assertion options, calls `navigator.credentials.get()`, then sends the result to `/api/demo/login/finish`.
+The optional **Config id** is sent on every start call. Leave it blank to let AMS match this page's `Origin`, then the primary FIDO server configuration. Copy the id from **Settings → FIDO Configuration** when the tenant has more than one. Add this page origin (for example `http://localhost:5173`) to that configuration's **Origins** list. The host must match the configuration domain.
 
-End-to-end: **Browser (WebAuthn) → Java sample backend (xsenseams-java-fido-sdk) → XSenseAMS (four FIDO APIs).**
+1. **Register FIDO:** Enter a username or email that already exists in AMS. The app calls `/api/demo/register/start`, passes `credential_creation.publicKey` to `navigator.credentials.create()` after decoding `challenge` and `user.id`, then posts the authenticator result to `/api/demo/register/finish`. Registration creates a resident key.
+2. **Login with username:** Enter the same username or email. The app calls `/api/demo/login/start`, then `navigator.credentials.get()` with that user's `allowCredentials`, then `/api/demo/login/finish`.
+3. **Login with security key:** Leave the username blank. The app calls `/api/demo/login/init` (no allow-list), then `navigator.credentials.get()`, then `/api/demo/login/initfinish`. AMS returns the username from the credential user handle.
+
+The browser talks to the Java sample. The sample calls the six AMS FIDO routes and forwards this page's `Origin` header. A successful login does not issue an AMS access token. The sample only reports the AMS result.
