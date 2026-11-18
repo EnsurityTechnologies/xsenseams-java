@@ -28,9 +28,10 @@ mvn clean install
 
 ## Configuration
 
-- **Base URL**: Your XSenseAMS server base URL (e.g. `https://ams.example.com` or `https://ams.example.com/tenant/tenant-id` if using tenant-in-path).
-- **API Key**: Value for the `X-AMS-API-Key` header (from your server config; default handler may expect `testapikey` in development).
-- **Tenant** (optional): If your deployment uses a tenant header, set it via `tenantHeader(name, value)`.
+- **Base URL**: The AMS tenant host, for example `https://contoso.example.com`. In a single-tenant deployment this is the configured AMS domain. If the deployment is mounted under a URL prefix, include that prefix. The API paths stay `/api/...`.
+- **API Key**: Value for the `X-AMS-API-Key` header. A missing, unknown, or expired key returns HTTP 401. The header is sent on every call, including the usernameless GET.
+- **Origin** (optional): Page origin that calls `navigator.credentials.create` or `navigator.credentials.get` — scheme, host, and port, with no path and no trailing slash. Set a default with `origin(...)`. A non-blank origin passed on a call replaces that default. AMS uses this header to choose a FIDO server configuration when the start call does not include a configuration id.
+- **Tenant** (optional): AMS normally resolves the tenant from the host. If a deployment still expects a tenant header, set it with `tenantHeader(name, value)`.
 
 ## Usage
 
@@ -41,8 +42,10 @@ import com.xsenseams.fido.FidoClient;
 import com.xsenseams.fido.FidoClientConfig;
 
 FidoClientConfig config = FidoClientConfig.builder()
-    .baseUrl("https://ams.example.com")
+    .baseUrl("https://contoso.example.com")
     .apiKey("your-api-key")
+    .origin("https://login.contoso.com")
+    .fidoServerConfigId("your-config-id")
     .build();
     // Optional: .tenantHeader("X-Tenant-ID", "tenant-id")
     // Optional: .connectTimeoutSeconds(30).readTimeoutSeconds(60)
@@ -59,8 +62,11 @@ import com.xsenseams.fido.dto.MakeCredentialRequest;
 import com.xsenseams.fido.dto.MakeCredentialResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 
-MakeCredentialRequest req = new MakeCredentialRequest("username");
+MakeCredentialRequest req = new MakeCredentialRequest("jane.doe");
+// Optional. Omit it to let AMS match Origin, then the primary configuration.
+req.setFidoServerConfigId("optional-config-id");
 MakeCredentialResponse resp = client.makeCredentialRequest(req);
+// Or pass the page origin for this call: client.makeCredentialRequest(req, "https://login.contoso.com");
 
 String sessionId = resp.getSessionId();
 JsonNode credentialCreation = resp.getCredentialCreation();  // PublicKeyCredentialCreationOptions
@@ -92,7 +98,7 @@ BaseResponse finishResp = client.makeCredentialResponse(finishReq);
 import com.xsenseams.fido.dto.GetAssertionRequest;
 import com.xsenseams.fido.dto.GetAssertionResponse;
 
-GetAssertionRequest req = new GetAssertionRequest("username");
+GetAssertionRequest req = new GetAssertionRequest("jane.doe", "optional-config-id");
 GetAssertionResponse resp = client.getAssertionRequest(req);
 
 String sessionId = resp.getSessionId();
@@ -117,13 +123,13 @@ BaseResponse finishResp = client.getAssertionResponse(finishReq);
 
 ### 4. Username-less / discoverable login flow (assertion init)
 
-If your server flow supports starting assertion without sending username first:
-
-**Step 1 – Init assertion:** fetch challenge/options without username.
+**Step 1 – Init assertion:** fetch challenge and options without a username. `allowCredentials` is omitted.
 
 ```java
 import com.xsenseams.fido.dto.GetAssertionResponse;
 
+// No id argument: the client sends FidoClientConfig.fidoServerConfigId.
+// Pass an id here to override that backend value for this call.
 GetAssertionResponse initResp = client.getAssertionInit();
 
 String sessionId = initResp.getSessionId();
@@ -181,3 +187,11 @@ The SDK uses **Jackson `JsonNode`** for WebAuthn fields (`credential_creation`, 
 | `getAssertionResponse` | POST `/api/fidogetassertionresponse` | Finish FIDO login |
 
 All requests require header: `X-AMS-API-Key: <your-api-key>`.
+
+Registration and username login send an optional `fido_server_config_id` in the JSON body. Usernameless login sends that same id as a query parameter. Finish calls do not send it; AMS reads the configuration it stored on the session. When a start call omits the id, the client sends `FidoClientConfig.fidoServerConfigId`. A blank value is omitted.
+
+AMS chooses the configuration in this order: the supplied id, then a unique match of the `Origin` header, then the tenant primary configuration. An unknown id returns HTTP 404 and AMS does not fall through. Finish verification checks the origin the security key signed against that configuration's origins list.
+
+A successful ceremony is HTTP 200 with `"status": true`. Some ceremony failures are also HTTP 200, with `"status": false` and a `message`. The client throws `FidoApiException` for those, and for HTTP 400, 401, 404, and 500. `getMessage()` is the AMS `message` when the body has one.
+
+These calls do not issue an AMS access token or device token. After `"status": true`, the caller decides what its own session does. Usernameless finish also returns the AMS `username`.
